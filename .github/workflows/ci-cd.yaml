@@ -51,4 +51,3 @@ jobs:
         run: |
           export KUBECONFIG=$PWD/kubeconfig
           kubectl apply -f k8s/
-          
