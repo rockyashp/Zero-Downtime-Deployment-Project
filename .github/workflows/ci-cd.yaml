@@ -167,6 +167,10 @@ jobs:
           mkdir -p $HOME/.kube
           echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
           chmod 600 $HOME/.kube/config
+          
+          # Fix Windows paths to relative paths
+          sed -i "s|C:\\\\Users\\\\yasha\\\\.minikube|~/.minikube|g" $HOME/.kube/config
+          
           kubectl cluster-info
 
       - name: Update Frontend Deployment Image
