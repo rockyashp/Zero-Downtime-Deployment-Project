@@ -24,7 +24,7 @@ jobs:
 
       - name: Build Frontend
         run: |
-          docker build -t himanshux99/astro-frontend:latest ./frontend
+          docker build -t himanshux99/astro-frontend:latest ./Frontend
 
       - name: Build Backend
         run: |
