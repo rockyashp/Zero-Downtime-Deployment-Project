@@ -165,12 +165,60 @@ jobs:
       - name: Configure kubeconfig
         run: |
           mkdir -p $HOME/.kube
-          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config.raw
+          
+          # Convert file paths to embedded data
+          python3 << 'EOF'
+          import yaml
+          import os
+          import base64
+          
+          config_path = os.path.expanduser("~/.kube/config.raw")
+          output_path = os.path.expanduser("~/.kube/config")
+          
+          with open(config_path, 'r') as f:
+              config = yaml.safe_load(f)
+          
+          # Convert certificate-authority file paths to data
+          for cluster in config.get('clusters', []):
+              if 'certificate-authority' in cluster['cluster']:
+                  cert_path = cluster['cluster']['certificate-authority']
+                  # Try to read the file, if it doesn't exist, skip
+                  try:
+                      with open(cert_path, 'rb') as f:
+                          cert_data = base64.b64encode(f.read()).decode('utf-8')
+                          cluster['cluster']['certificate-authority-data'] = cert_data
+                          del cluster['cluster']['certificate-authority']
+                  except:
+                      pass
+          
+          # Convert client-certificate file paths to data
+          for user in config.get('users', []):
+              if 'client-certificate' in user['user']:
+                  cert_path = user['user']['client-certificate']
+                  try:
+                      with open(cert_path, 'rb') as f:
+                          cert_data = base64.b64encode(f.read()).decode('utf-8')
+                          user['user']['client-certificate-data'] = cert_data
+                          del user['user']['client-certificate']
+                  except:
+                      pass
+              
+              if 'client-key' in user['user']:
+                  key_path = user['user']['client-key']
+                  try:
+                      with open(key_path, 'rb') as f:
+                          key_data = base64.b64encode(f.read()).decode('utf-8')
+                          user['user']['client-key-data'] = key_data
+                          del user['user']['client-key']
+                  except:
+                      pass
+          
+          with open(output_path, 'w') as f:
+              yaml.dump(config, f)
+          EOF
+          
           chmod 600 $HOME/.kube/config
-          
-          # Fix Windows paths to relative paths
-          sed -i "s|C:\\\\Users\\\\yasha\\\\.minikube|~/.minikube|g" $HOME/.kube/config
-          
           kubectl cluster-info
 
       - name: Update Frontend Deployment Image
